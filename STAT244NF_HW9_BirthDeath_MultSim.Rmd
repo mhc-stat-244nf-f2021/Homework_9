@@ -1,0 +1,279 @@
+---
+title: 'Homework 9: Birth and Death Processes, Conducting Multiple Simulations'
+author: "YOUR NAME HERE"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(reshape2)
+library(ggplot2)
+library(dplyr)
+```
+
+## Instructions:
+
+1. Please replace "YOUR NAME HERE" under author above with your name before you knit your final document for submission.
+2. All of your homework needs to be completed in this document, whether it requires R or just typed responses. As we incorporate more statistical computing into the course, it will be important that you are comfortable with R Markdown, so start now. Remember that R Markdown gives us a convenient framework for reproducible statistical reports because it contains a complete record of our analyses and conclusions.
+3. You may knit to PDF, HTML, or Word (click on the drop-down menu for Knit to choose the file output type). 
+4. Before submitting your work, please make sure the knitted file is well organized, legible, and looks the way you expect!
+5. Please include the names of any classmates with whom you worked on this homework, as well as any external resources that you might have used.
+6. This homework assignment is **due on Friday, November 19, 2021 and should be submitted to Gradescope**.
+
+- *Collaborators:*
+
+- *External resources:*
+
+## Conducting and Visualizing Results from Multiple Simulations
+
+In the previous R lab we worked on in class, you modified a function to simulate from an SIR model. Specifically, we included the capacity to specify the number of simulations that we want to run, and we modified the storage so we can keep track of the various simulation outcomes. Then, we modified the structure of the data so that we could plot results from the different simulations. Below is a modified function that should be similar to what you wrote in your lab. 
+
+```{r}
+SIR_simulation <- function(N, S0, I0, R_0, D, Time, nItr, seed){
+  # Added seed as a parameter -- specify a single number as an argument
+  set.seed(seed)
+  
+  ## function to calculate lambda_t
+  lambda_t_fcn <- function(R_0, D, I_i, N){
+    c_e <- R_0/D
+    return(1-exp(-c_e*I_i/N))
+  }
+  
+  ## Create an empty data frame with the same names
+  sim_df <- data.frame(time=character(0),
+                       S=character(0),
+                       I=character(0),
+                       R=character(0),
+                       I_SI=character(0),
+                       R_IR=character(0),
+                       lambda_t=character(0),
+                       SimNum=character(0))
+  
+  for (j in 1:nItr){
+    SIR_df <- data.frame(time=0:Time,
+                     S=rep(NA, Time+1),
+                     I=rep(NA, Time+1),
+                     R=rep(NA, Time+1),
+                     I_SI=rep(NA, Time+1),
+                     R_IR=rep(NA, Time+1),
+                     lambda_t=rep(NA, Time+1),
+                     ## Add a column to keep track of simulation number
+                     SimNum=rep(j, Time+1)) 
+    
+    SIR_df$S[1] <- S0
+    SIR_df$I[1] <- I0
+    SIR_df$R[1] <- N-S0-I0
+    
+    for (i in 2:(Time+1)){
+      SIR_df$lambda_t[i] <- lambda_t_fcn(R_0=R_0, D=D, I_i=SIR_df$I[i-1], N=N)
+      SIR_df$I_SI[i] <- rbinom(n=1, size=SIR_df$S[i-1], prob=SIR_df$lambda_t[i])
+      SIR_df$R_IR[i] <- rbinom(n=1, size=SIR_df$I[i-1], prob=1/D)
+      SIR_df$S[i] <- SIR_df$S[i-1]-SIR_df$I_SI[i]
+      SIR_df$I[i] <- SIR_df$I[i-1]+SIR_df$I_SI[i]-SIR_df$R_IR[i]
+      SIR_df$R[i] <- SIR_df$R[i-1]+SIR_df$R_IR[i]
+    }
+    
+    sim_df <- rbind(sim_df, SIR_df)
+  }
+  
+  ## Using the reshape2 package to change from "wideform" to "longform"
+  sim_df2 <- melt(data=sim_df, id.vars=c("time", "SimNum"),
+                  measure.vars=c("S","I","R"),
+                  variable.name="Compartment",
+                  value.name="Count")
+  ## Return longform for simulations for plotting
+  return(sim_df2)
+}
+```
+
+**MS_1. Run the SIR_simulation function with the following arguments: N=5000, S0=4999, I0=1, R_0=3, D=7, Time=100, nItr=10, and seed=124. Then plot your results - you should distinguish between the different simulations (SimNum) by using the linetype argument and distinguish between the different compartments using color. Make sure that you ONLY include results from the S, I, and R compartments -- do not include any other information.**
+
+```{r fig.align='center'}
+
+```
+
+**MS_2. Do the same thing, but now run this for nItr=15. Plot your results as before. Look at the legend for SimNum - what do you notice about the legend for the 14th and 15th simulations? Why do you think this is happening?**
+
+```{r fig.align='center'}
+
+```
+
+
+
+**MS_3. Since there are a finite number of different linetypes that we can specify, it will be advantageous to modify our code again, such that instead of returning all simulation results, it returns a summary of the results. As with other data summaries, we can summarize our results with measures of center and spread. Examine the function below, SIR_simulation2, specifically the object that the function returns. What does the function return? You may want to look at the help documentation for mean, median, and quantile if you are not comfortable with these functions (?mean, ?median, ?quantile). You should run the code for the same values as in (2), but run 50 simulations - make sure to store this as an object with an informative name. DO NOT PRINT OUT YOUR SIMULATION RESULT (IF YOU HAVE A LOT OF PAGES OF DATA YOU HAVE PRINTED THIS).**
+
+```{r}
+SIR_simulation2 <- function(N, S0, I0, R_0, D, Time, nItr, seed){
+
+  # Added seed as a parameter -- specify a single number as an argument
+  set.seed(seed)
+  
+  ## function to calculate lambda_t
+  lambda_t_fcn <- function(R_0, D, I_i, N){
+    c_e <- R_0/D
+    return(1-exp(-c_e*I_i/N))
+  }
+  
+  ## Create an empty data frame with the same names
+  sim_df <- data.frame(time=character(0),
+                       S=character(0),
+                       I=character(0),
+                       R=character(0),
+                       I_SI=character(0),
+                       R_IR=character(0),
+                       lambda_t=character(0),
+                       SimNum=character(0))
+  
+  for (j in 1:nItr){
+    SIR_df <- data.frame(time=0:Time,
+                     S=rep(NA, Time+1),
+                     I=rep(NA, Time+1),
+                     R=rep(NA, Time+1),
+                     I_SI=rep(NA, Time+1),
+                     R_IR=rep(NA, Time+1),
+                     lambda_t=rep(NA, Time+1),
+                     ## Add a column to keep track of simulation number
+                     SimNum=rep(j, Time+1)) 
+    
+    SIR_df$S[1] <- S0
+    SIR_df$I[1] <- I0
+    SIR_df$R[1] <- N-S0-I0
+    
+    for (i in 2:(Time+1)){
+      SIR_df$lambda_t[i] <- lambda_t_fcn(R_0=R_0, D=D, I_i=SIR_df$I[i-1], N=N)
+      SIR_df$I_SI[i] <- rbinom(n=1, size=SIR_df$S[i-1], prob=SIR_df$lambda_t[i])
+      SIR_df$R_IR[i] <- rbinom(n=1, size=SIR_df$I[i-1], prob=1/D)
+      SIR_df$S[i] <- SIR_df$S[i-1]-SIR_df$I_SI[i]
+      SIR_df$I[i] <- SIR_df$I[i-1]+SIR_df$I_SI[i]-SIR_df$R_IR[i]
+      SIR_df$R[i] <- SIR_df$R[i-1]+SIR_df$R_IR[i]
+    }
+    
+    sim_df <- rbind(sim_df, SIR_df)
+  }
+  
+  # Using the reshape2 package to change from "wideform" to "longform"
+  sim_df2 <- melt(data=sim_df, id.vars=c("time", "SimNum"),
+                  measure.vars=c("S","I","R"),
+                  variable.name="Compartment",
+                  value.name="Count")
+  
+  summary_df <- sim_df2 %>%
+    group_by(time, Compartment) %>%
+    summarize(
+      mean=mean(Count),
+      median=quantile(Count, 0.5),
+      percentile_2.5=quantile(Count, 0.025),
+      percentile_97.5=quantile(Count, 0.975)
+    )
+  return(summary_df)
+}
+```
+
+```{r}
+
+```
+
+
+**MS_4. Typically, variability for time-dependent simulations like we have here can be visualized in ggplot2 by adding a geom_ribbon layer to your code. Uncomment and modify the code below to plot your results. Briefly describe what the code produces. Make sure to comment both on what the lines and the ribbons represent.** 
+
+```{r fig.align='center'}
+# ggplot(data=, aes(x=time, y=median)) +
+#   geom_line(aes(color=Compartment), size=1.1) +
+#   geom_ribbon(aes(ymin=percentile_2.5, ymax=percentile_97.5,
+#                   fill=Compartment), alpha=0.1) +
+#   xlab("Time (Days)") + 
+#   ylab("Compartment Count")
+```
+
+## Births and Deaths
+
+**BD_1. Suppose you are making predictions for how an infectious disease will spread in a population using an SIR model. The disease is not particularly deadly, and you are interested in short-term predictions, over the next month. Explain why it is not important to include births and deaths in a compartmental model in this context.**
+
+
+
+
+
+**BD_2. In our previous lab, we worked on incorporating births and deaths into a compartmental model. In that context, we assumed that all individuals were born susceptible. However, as we discussed in class, newborns typically receive a number of vaccinations in their first year of life, rendering them immune to such infections. The function below has been modified to incorporate births and deaths, and also to allow some proportion of newborns, v (between 0 and 1), to be vaccinated. Refer to this function for (a)-(c) below.**
+
+- (a) Does the function below implement a stochastic or deterministic compartmental model? Carefully explain your reasoning in 1-3 sentences.
+
+```{r}
+## b=per-capita birthrate (per day); m=mortality rate (per day)
+SEIR_simulation_BD_1 <- function(N0, S0, E0, I0, R_0, 
+                              pD, D, b, m, mI, v, Time){
+  
+  SEIR <- data.frame(time=0:Time,
+                     S=rep(NA, Time+1),
+                     E=rep(NA, Time+1),
+                     I=rep(NA, Time+1),
+                     R=rep(NA, Time+1),
+                     E_SE=rep(NA, Time+1),
+                     I_EI=rep(NA, Time+1),
+                     R_IR=rep(NA, Time+1),
+                     B=rep(NA, Time+1),
+                     B_S=rep(NA, Time+1),
+                     B_R=rep(NA, Time+1),
+                     M_S=rep(NA, Time+1),
+                     M_E=rep(NA, Time+1),
+                     M_I=rep(NA, Time+1),
+                     M_R=rep(NA, Time+1),
+                     N=rep(NA, Time+1),
+                     lambda_t=rep(NA, Time+1)) 
+    
+    SEIR$S[1] <- S0
+    SEIR$E[1] <- E0
+    SEIR$I[1] <- I0
+    SEIR$R[1] <- N0-S0-E0-I0
+    SEIR$N[1] <- N0
+    
+    for (i in 2:(Time+1)){
+      SEIR$lambda_t[i] <- R_0/D*SEIR$I[i-1]/SEIR$N[i-1]
+      
+      SEIR$E_SE[i] <- SEIR$S[i-1]*SEIR$lambda_t[i]
+      SEIR$I_EI[i] <- SEIR$E[i-1]*1/pD
+      SEIR$R_IR[i] <- SEIR$I[i-1]*1/D
+      
+      ## Births
+      SEIR$B[i] <- b*SEIR$N[i-1]
+      SEIR$B_S[i] <- (1-v)*SEIR$B[i]
+      SEIR$B_R[i] <- v*SEIR$B[i]
+
+      ## Deaths
+      SEIR$M_S[i] <- m*SEIR$S[i-1]
+      SEIR$M_E[i] <- m*SEIR$E[i-1]
+      SEIR$M_I[i] <- m*SEIR$I[i-1]
+      SEIR$M_R[i] <- m*SEIR$R[i-1]
+
+      ## Update compartments
+      SEIR$S[i] <- SEIR$S[i-1]-SEIR$E_SE[i]+SEIR$B_S[i]-SEIR$M_S[i]
+      SEIR$E[i] <- SEIR$E[i-1]+SEIR$E_SE[i]-SEIR$I_EI[i]-SEIR$M_E[i]
+      SEIR$I[i] <- SEIR$I[i-1]+SEIR$I_EI[i]-SEIR$R_IR[i]-SEIR$M_I[i]
+      SEIR$R[i] <- SEIR$R[i-1]+SEIR$R_IR[i]+SEIR$B_R[i]-SEIR$M_R[i]
+      ## Update N
+      SEIR$N[i] <- SEIR$S[i]+SEIR$E[i]+SEIR$I[i]+SEIR$R[i]
+    }
+
+  
+  # Using the reshape2 package to change from "wideform" to "longform"
+  sim_df2 <- melt(data=SEIR, id.vars=c("time"),
+                  measure.vars=c("S","E","I","R"),
+                  variable.name="Compartment",
+                  value.name="Count")
+  return(list(SEIR=SEIR, sim_df2=sim_df2))
+}
+```
+
+- (b) Run the function for an initial population of 100,000 people, with one infectious individual, and the rest susceptible. Assume a basic reproductive number of 13, a pre-infectious period of 8 days, an infectious period of 7 days, and equal birth and death rates. To determine the birth and death rates, you may assume an average life expectancy of 70 years. Assume a vaccination rate of 0, and run your simulation for 15000 days. Be sure to assign your simulation result to a name and plot your result. What explanation can you give for the result you observe? (It may be useful to create two plots, one like we usually do, with all compartments, and one just with the infectious compartment counts versus time.)
+
+```{r fig.align='center'}
+
+```
+
+- (c) Run the function three more times with the same values as in (b), but for these three simulations, assume 10%, 30%, and 75% of newborns are vaccinated. Assign your simulation results to different names, and plot your results. What do you observe about the effect of vaccinating newborns on this process?
+
+```{r fig.align='center'}
+
+```
+
